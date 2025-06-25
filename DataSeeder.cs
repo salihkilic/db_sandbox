@@ -154,7 +154,7 @@
     private static void SeedOrders(AppDbContext context)
     {
         var customers = context.Customers.ToList();
-        var random = new Random(42);
+        var random = new Random();
         var orders = new List<Order>();
         foreach (var customer in customers)
         {
@@ -176,7 +176,7 @@
     {
         var orders = context.Orders.ToList();
         var products = context.Products.ToList();
-        var random = new Random(99);
+        var random = new Random();
         var orderItems = new List<OrderItem>();
         
         foreach (var order in orders)
