@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using db_sandbox.Exercises;
+using Microsoft.EntityFrameworkCore;
 using Spectre.Console;
 
 namespace db_sandbox.Tests;
@@ -23,8 +24,7 @@ class CustomerOrdersTupleComparer : IEqualityComparer<(string, List<int>)>
         if (obj.Item2 != null)
         {
             // Order-insensitive hash: XOR all hashes
-            foreach (var id in obj.Item2)
-                hash ^= id.GetHashCode();
+            hash = obj.Item2.Aggregate(hash, (current, id) => current ^ id.GetHashCode());
         }
         return hash;
     }
@@ -40,7 +40,7 @@ public static class JoinsTests
         using (var context = new AppDbContext(options))
         {
             DataSeeder.SeedWebshop(context);
-            var actual = JoinsExercises.LeftInnerJoinProductsCategories(context);
+            var actual = Joins.LeftInnerJoinProductsCategories(context);
             var expected = (from p in context.Products
                             join c in context.Categories on p.CategoryId equals c.Id
                             select new { p.Name, CategoryName = c.Name })
@@ -61,7 +61,7 @@ public static class JoinsTests
         using (var context = new AppDbContext(options))
         {
             DataSeeder.SeedWebshop(context);
-            var actual = JoinsExercises.LeftOuterJoinProductsCategories(context);
+            var actual = Joins.LeftOuterJoinProductsCategories(context);
             var expected = (from p in context.Products
                             join c in context.Categories on p.CategoryId equals c.Id into pc
                             from c in pc.DefaultIfEmpty()
@@ -83,7 +83,7 @@ public static class JoinsTests
         using (var context = new AppDbContext(options))
         {
             DataSeeder.SeedWebshop(context);
-            var actual = JoinsExercises.FullOuterJoinProductsCategories(context);
+            var actual = Joins.FullOuterJoinProductsCategories(context);
             var left = (from p in context.Products
                         join c in context.Categories on p.CategoryId equals c.Id into pc
                         from c in pc.DefaultIfEmpty()
@@ -113,7 +113,7 @@ public static class JoinsTests
         using (var context = new AppDbContext(options))
         {
             DataSeeder.SeedWebshop(context);
-            var actual = JoinsExercises.MultipleJoinsOrderItems(context);
+            var actual = Joins.MultipleJoinsOrderItems(context);
             var expected = (from oi in context.OrderItems
                             join o in context.Orders on oi.OrderId equals o.Id
                             join c in context.Customers on o.CustomerId equals c.Id
@@ -134,30 +134,40 @@ public static class JoinsTests
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: "TestDb_Join_GroupJoin")
             .Options;
+        
         using (var context = new AppDbContext(options))
         {
             DataSeeder.SeedWebshop(context);
-            var actual = JoinsExercises.GroupJoinCustomerOrders(context);
+            var actual = Joins.GroupJoinCustomerOrders(context);
             var expected = (from c in context.Customers
                             join o in context.Orders on c.Id equals o.CustomerId into orders
                             select new { c.Name, OrderIds = orders.Select(x => x.Id).ToList() })
                             .AsEnumerable()
                             .Select(x => (x.Name, x.OrderIds))
                             .ToList();
+            
+            // Use the custom comparer to compare the result tuples
             var comparer = new CustomerOrdersTupleComparer();
             bool pass = actual.Count == expected.Count &&
                         !expected.Except(actual, comparer).Any() &&
                         !actual.Except(expected, comparer).Any();
+            
+            // Test output
             if (pass)
             {
                 AnsiConsole.MarkupLine("[lime]PASS[/] GroupJoin");
             }
             else
             {
+                // Check for missing and extra items
                 var missing = expected.Except(actual, comparer).ToList();
                 var extra = actual.Except(expected, comparer).ToList();
+                
+                // Format the output for missing and extra items
                 string missingStr = string.Join("\n ", missing.Select(e => $"({e.Item1}, [{string.Join(",", e.Item2)}])"));
                 string extraStr = string.Join("\n ", extra.Select(a => $"({a.Item1}, [{string.Join(",", a.Item2)}])"));
+                
+                // Print the results
                 AnsiConsole.MarkupLine($"[red]FAIL[/] GroupJoin");
                 if (missing.Any())
                     AnsiConsole.MarkupLine($"[yellow]Missing:[/]\n{missingStr}");
