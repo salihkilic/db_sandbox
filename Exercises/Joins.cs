@@ -6,11 +6,16 @@ namespace db_sandbox.Exercises;
 public static class Joins
 {
     // Left Inner Join: Get all products with their category name (only if category exists)
+    // (Name, CategoryName)
     public static List<(string ProductName, string CategoryName)> LeftInnerJoinProductsCategories(AppDbContext context)
     {
-        return (from p in context.Products
-                join c in context.Categories on p.CategoryId equals c.Id
-                select new { p.Name, CategoryName = c.Name })
+        return (from product in context.Products
+                join category in context.Categories on product.CategoryId equals category.Id
+                // I made product.name and category.name clash on purpose
+                // We need to set a custom property name in the anonymous object
+                select new {product.Name, CategoryName = category.Name} 
+                )
+                
             .AsEnumerable()
             .Select(x => (x.Name, x.CategoryName))
             .ToList();
@@ -19,10 +24,13 @@ public static class Joins
     // Left Outer Join: Get all products and their category name (null default if no category)
     public static List<(string ProductName, string? CategoryName)> LeftOuterJoinProductsCategories(AppDbContext context)
     {
-        return (from p in context.Products
-                join c in context.Categories on p.CategoryId equals c.Id into pc
-                from c in pc.DefaultIfEmpty()
-                select new { p.Name, CategoryName = c != null ? c.Name : null })
+        return (from product in context.Products
+                join category in context.Categories on product.CategoryId equals category.Id into pc
+                // This category variable is not the same as line above!
+                // Try renaming it to see why
+                from category in pc.DefaultIfEmpty() 
+                select new { product.Name, CategoryName = category != null ? category.Name : null }
+                )
             .AsEnumerable()
             .Select(x => (x.Name, x.CategoryName))
             .ToList();
@@ -47,7 +55,7 @@ public static class Joins
                 select new { ProductName = (string?)null, CategoryName = c.Name })
             .AsEnumerable()
             .Select(x => (x.ProductName, x.CategoryName));
-        return left.Concat(right).ToList();
+        return left.Union(right).ToList();
     }
 
     // Multiple Joins: Get all order items with product and customer name

@@ -41,12 +41,16 @@ public static class JoinsTests
         {
             DataSeeder.SeedWebshop(context);
             var actual = Joins.LeftInnerJoinProductsCategories(context);
+            
+            // The correct LINQ query to get expected results
             var expected = (from p in context.Products
                             join c in context.Categories on p.CategoryId equals c.Id
                             select new { p.Name, CategoryName = c.Name })
                             .AsEnumerable()
                             .Select(x => (x.Name, x.CategoryName))
                             .ToList();
+            
+            // Compare the actual and expected results
             bool pass = actual.OrderBy(x => x.Item1 + x.Item2)
                               .SequenceEqual(expected.OrderBy(x => x.Item1 + x.Item2));
             AnsiConsole.MarkupLine(pass ? "[lime]PASS[/] LeftInnerJoin" : $"[red]FAIL[/] LeftInnerJoin\nExpected: {string.Join(", ", expected)}\nActual: {string.Join(", ", actual)}");
@@ -62,6 +66,8 @@ public static class JoinsTests
         {
             DataSeeder.SeedWebshop(context);
             var actual = Joins.LeftOuterJoinProductsCategories(context);
+            
+            // The correct LINQ query to get expected results
             var expected = (from p in context.Products
                             join c in context.Categories on p.CategoryId equals c.Id into pc
                             from c in pc.DefaultIfEmpty()
@@ -69,6 +75,8 @@ public static class JoinsTests
                             .AsEnumerable()
                             .Select(x => (x.Name, x.CategoryName))
                             .ToList();
+            
+            // Compare the actual and expected results
             bool pass = actual.OrderBy(x => x.Item1 + x.Item2)
                               .SequenceEqual(expected.OrderBy(x => x.Item1 + x.Item2));
             AnsiConsole.MarkupLine(pass ? "[lime]PASS[/] LeftOuterJoin" : $"[red]FAIL[/] LeftOuterJoin\nExpected: {string.Join(", ", expected)}\nActual: {string.Join(", ", actual)}");
@@ -84,6 +92,8 @@ public static class JoinsTests
         {
             DataSeeder.SeedWebshop(context);
             var actual = Joins.FullOuterJoinProductsCategories(context);
+            
+            // The correct LINQ query to get expected results
             var left = (from p in context.Products
                         join c in context.Categories on p.CategoryId equals c.Id into pc
                         from c in pc.DefaultIfEmpty()
@@ -97,7 +107,9 @@ public static class JoinsTests
                          select new { ProductName = (string)null, CategoryName = c.Name })
                          .AsEnumerable()
                          .Select(x => (x.ProductName, x.CategoryName));
-            var expected = left.Concat(right).ToList();
+            var expected = left.Union(right).ToList();
+            
+            // Compare the actual and expected results
             bool pass = actual.Count == expected.Count &&
                         !expected.Except(actual).Any() &&
                         !actual.Except(expected).Any();
