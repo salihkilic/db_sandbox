@@ -5,9 +5,18 @@ namespace db_sandbox.Exercises;
 
 public static class Joins
 {
+    /// +-------------------+-------------------+-------------------+-------------------+
+    /// |      Join Type    | Unmatched Left    | Unmatched Right   | Matching Pairs    |
+    /// +-------------------+-------------------+-------------------+-------------------+
+    /// | Inner Join        |        No         |        No         |       Yes         |
+    /// | Left Outer Join   |       Yes         |        No         |       Yes         |
+    /// | Right Outer Join  |        No         |       Yes         |       Yes         |
+    /// | Full Outer Join   |       Yes         |       Yes         |       Yes         |
+    /// +-------------------+-------------------+-------------------+-------------------+
+    
     // Left Inner Join: Get all products with their category name (only if category exists)
     // (Name, CategoryName)
-    public static List<(string ProductName, string CategoryName)> LeftInnerJoinProductsCategories(AppDbContext context)
+    public static List<(string ProductName, string CategoryName)> InnerJoinProductsCategories(AppDbContext context)
     {
         return (from product in context.Products
                 join category in context.Categories on product.CategoryId equals category.Id
@@ -15,7 +24,6 @@ public static class Joins
                 // We need to set a custom property name in the anonymous object
                 select new {product.Name, CategoryName = category.Name} 
                 )
-                
             .AsEnumerable()
             .Select(x => (x.Name, x.CategoryName))
             .ToList();
@@ -25,11 +33,9 @@ public static class Joins
     public static List<(string ProductName, string? CategoryName)> LeftOuterJoinProductsCategories(AppDbContext context)
     {
         return (from product in context.Products
-                join category in context.Categories on product.CategoryId equals category.Id into pc
-                // This category variable is not the same as line above!
-                // Try renaming it to see why
-                from category in pc.DefaultIfEmpty() 
-                select new { product.Name, CategoryName = category != null ? category.Name : null }
+                join category in context.Categories on product.CategoryId equals category.Id into productCategory
+                from category in productCategory.DefaultIfEmpty()
+                select new {product.Name, CategoryName = category != null ? category.Name : null}
                 )
             .AsEnumerable()
             .Select(x => (x.Name, x.CategoryName))
@@ -51,8 +57,7 @@ public static class Joins
         var right = (from c in context.Categories
                 join p in context.Products on c.Id equals p.CategoryId into cp
                 from p in cp.DefaultIfEmpty()
-                where p == null
-                select new { ProductName = (string?)null, CategoryName = c.Name })
+                select new { ProductName = p != null ? p.Name : null, CategoryName = c.Name })
             .AsEnumerable()
             .Select(x => (x.ProductName, x.CategoryName));
         return left.Union(right).ToList();

@@ -32,15 +32,15 @@ class CustomerOrdersTupleComparer : IEqualityComparer<(string, List<int>)>
 
 public static class JoinsTests
 {
-    private static void Test_LeftInnerJoin()
+    private static void Test_InnerJoin()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: "TestDb_Join_LeftInner")
+            .UseInMemoryDatabase(databaseName: "TestDb_Join_Inner")
             .Options;
         using (var context = new AppDbContext(options))
         {
             DataSeeder.SeedWebshop(context);
-            var actual = Joins.LeftInnerJoinProductsCategories(context);
+            var actual = Joins.InnerJoinProductsCategories(context);
             
             // The correct LINQ query to get expected results
             var expected = (from p in context.Products
@@ -53,7 +53,7 @@ public static class JoinsTests
             // Compare the actual and expected results
             bool pass = actual.OrderBy(x => x.Item1 + x.Item2)
                               .SequenceEqual(expected.OrderBy(x => x.Item1 + x.Item2));
-            AnsiConsole.MarkupLine(pass ? "[lime]PASS[/] LeftInnerJoin" : $"[red]FAIL[/] LeftInnerJoin\nExpected: {string.Join(", ", expected)}\nActual: {string.Join(", ", actual)}");
+            AnsiConsole.MarkupLine(pass ? "[lime]PASS[/] InnerJoin" : $"[red]FAIL[/] InnerJoin\nExpected: {string.Join(", ", expected)}\nActual: {string.Join(", ", actual)}");
         }
     }
 
@@ -103,8 +103,7 @@ public static class JoinsTests
             var right = (from c in context.Categories
                          join p in context.Products on c.Id equals p.CategoryId into cp
                          from p in cp.DefaultIfEmpty()
-                         where p == null
-                         select new { ProductName = (string)null, CategoryName = c.Name })
+                         select new { ProductName = p != null ? p.Name : null, CategoryName = c.Name })
                          .AsEnumerable()
                          .Select(x => (x.ProductName, x.CategoryName));
             var expected = left.Union(right).ToList();
@@ -113,7 +112,7 @@ public static class JoinsTests
             bool pass = actual.Count == expected.Count &&
                         !expected.Except(actual).Any() &&
                         !actual.Except(expected).Any();
-            AnsiConsole.MarkupLine(pass ? "[lime]PASS[/] FullOuterJoin" : $"[red]FAIL[/] FullOuterJoin\nExpected: {string.Join(", ", expected)}\nActual: {string.Join(", ", actual)}");
+            AnsiConsole.MarkupLine(pass ? "[lime]PASS[/] FullOuterJoin" : $"[red]FAIL[/] FullOuterJoin\nExpected: \n{string.Join(", ", expected)}\nActual: \n{string.Join(", ", actual)}");
         }
     }
 
@@ -193,7 +192,7 @@ public static class JoinsTests
     {
         var tests = new List<(string Name, Action Test)>
         {
-            ("LeftInnerJoin", Test_LeftInnerJoin),
+            ("LeftInnerJoin", Test_InnerJoin),
             ("LeftOuterJoin", Test_LeftOuterJoin),
             ("FullOuterJoin", Test_FullOuterJoin),
             ("MultipleJoins", Test_MultipleJoins),

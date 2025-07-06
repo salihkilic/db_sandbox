@@ -9,8 +9,8 @@ CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
 // ExerciseTests.RunAll();
 // SortingTests.RunAll();
-JoinsTests.RunAll();
-
+// JoinsTests.RunAll();
+GroupingTests.RunAll();
 
 // Create Tests in ExerciseTests.cs
 
